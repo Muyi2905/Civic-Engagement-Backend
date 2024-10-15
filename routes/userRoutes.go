@@ -1,13 +1,19 @@
 package routes
 
 import (
+	"muyi2905/civic/backend/controllers"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 func UserRoutes(db *gorm.DB, r *gin.Engine) {
-	r.Group("/users")
-{
-	r.
-}
+	r.Group("api/users")
+	{
+		r.POST("/", controllers.Signup)
+		r.POST("/", controllers.Login)
+		r.GET("/", func(c *gin.Context) { controllers.GetUsers(db, c) })
+		r.GET("/", controllers.GetUserProfile)
+		r.GET("/", func(c *gin.Context) { controllers.GetUserById(db, c) })
+	}
 }
