@@ -28,7 +28,7 @@ func generateJWT(userId uint) (string, error) {
 	claims := &Claims{
 		UserId: userId,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(), // Token expires in 24 hours
+			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
 		},
 	}
 
@@ -41,7 +41,6 @@ func generateJWT(userId uint) (string, error) {
 
 	return tokenString, nil
 }
-
 func Signup(db *gorm.DB, c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -72,7 +71,14 @@ func Signup(db *gorm.DB, c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": tokenString})
+	c.JSON(http.StatusOK, gin.H{
+		"token": tokenString,
+		"user": gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+			"email":    user.Email,
+		},
+	})
 }
 
 func Login(db *gorm.DB, c *gin.Context) {
@@ -103,7 +109,34 @@ func Login(db *gorm.DB, c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": tokenString})
+	c.JSON(http.StatusOK, gin.H{
+		"token": tokenString,
+		"user": gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+			"email":    user.Email,
+		},
+	})
+}
+func GetProfile(db *gorm.DB, c *gin.Context) {
+
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
+	var user models.User
+	if err := db.First(&user, userId).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":       user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+	})
 }
 
 func GetUsers(db *gorm.DB, c *gin.Context) {
