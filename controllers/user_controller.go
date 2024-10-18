@@ -117,10 +117,45 @@ func GetUserById(db *gorm.DB, c *gin.Context) {
 
 	if err := db.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "userid/user not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		}
 
 	}
+}
+
+func UpdateUser(db *gorm.DB, c *gin.Context) {
+	id := c.Param("id")
+
+	// Struct to capture the incoming JSON
+	var updateUser struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+	}
+
+	var user models.User
+	if err := db.First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find user"})
+		}
+		return
+	}
+
+	if err := c.ShouldBindJSON(&updateUser); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON input"})
+		return
+	}
+
+	user.Username = updateUser.Username
+	user.Email = updateUser.Email
+
+	if err := db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
 }
