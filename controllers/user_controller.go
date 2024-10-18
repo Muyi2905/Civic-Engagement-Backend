@@ -23,8 +23,26 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-func Signup(db *gorm.DB, c *gin.Context) {
+func generateJWT(userId uint) (string, error) {
 
+	claims := &Claims{
+		UserId: userId,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(), // Token expires in 24 hours
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
+func Signup(db *gorm.DB, c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -48,17 +66,9 @@ func Signup(db *gorm.DB, c *gin.Context) {
 		return
 	}
 
-	// Generate JWT token
-	claims := &Claims{
-		UserId: user.ID,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtSecret)
+	tokenString, err := generateJWT(user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
 		return
 	}
 
@@ -66,11 +76,11 @@ func Signup(db *gorm.DB, c *gin.Context) {
 }
 
 func Login(db *gorm.DB, c *gin.Context) {
-
 	var loginData struct {
 		Email    string `json:"email" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
+
 	if err := c.ShouldBindJSON(&loginData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -87,16 +97,9 @@ func Login(db *gorm.DB, c *gin.Context) {
 		return
 	}
 
-	claims := &Claims{
-		UserId: user.ID,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtSecret)
+	tokenString, err := generateJWT(user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
 		return
 	}
 
@@ -128,7 +131,6 @@ func GetUserById(db *gorm.DB, c *gin.Context) {
 func UpdateUser(db *gorm.DB, c *gin.Context) {
 	id := c.Param("id")
 
-	// Struct to capture the incoming JSON
 	var updateUser struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
