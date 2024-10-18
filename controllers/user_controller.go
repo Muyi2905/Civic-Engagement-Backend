@@ -16,7 +16,7 @@ import (
 )
 
 var validate = validator.New()
-var jwtSecret = []byte(os.Getenv("JWT-SECRET"))
+var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
 type Claims struct {
 	UserId uint `json:"user_id"`

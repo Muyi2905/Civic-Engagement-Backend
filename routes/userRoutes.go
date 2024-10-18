@@ -8,13 +8,14 @@ import (
 )
 
 func UserRoutes(db *gorm.DB, r *gin.Engine) {
-	r.Group("api/users")
+
+	api := r.Group("/api/users")
 	{
-		r.POST("/", func(c *gin.Context) { controllers.Signup(db, c) })
-		r.POST("/", func(c *gin.Context) { controllers.Login(db, c) })
-		r.GET("/", func(c *gin.Context) { controllers.GetUsers(db, c) })
-		r.GET("/", func(c *gin.Context) { controllers.GetUserById(db, c) })
-		r.PUT("/", func(c *gin.Context) { controllers.UpdateUser(db, c) })
+		api.POST("/signup", func(c *gin.Context) { controllers.Signup(db, c) })
+		api.POST("/login", func(c *gin.Context) { controllers.Login(db, c) })
+		api.GET("/", func(c *gin.Context) { controllers.GetUsers(db, c) })
+		api.GET("/:id", func(c *gin.Context) { controllers.GetUserById(db, c) }) // Added :id for user by ID
+		api.PUT("/:id", func(c *gin.Context) { controllers.UpdateUser(db, c) })
 	}
 	authorized := r.Group("/")
 	authorized.Use(middleware.AuthMiddleware())

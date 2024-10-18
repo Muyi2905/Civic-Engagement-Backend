@@ -8,13 +8,13 @@ import (
 	"strings"
 )
 
-// Define your Claims struct if it's not already defined elsewhere
+
 type Claims struct {
 	UserId uint `json:"user_id"`
 	jwt.StandardClaims
 }
 
-var jwtSecret = []byte(os.Getenv("JWT-SECRET"))
+var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {

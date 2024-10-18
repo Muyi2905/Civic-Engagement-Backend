@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"muyi2905/civic/backend/models"
+	"muyi2905/civic/backend/routes"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -34,5 +35,6 @@ func main() {
 	if err := DB.AutoMigrate(&models.User{}); err != nil {
 		log.Fatalf("Failed to auto migrate database :%v", err)
 	}
+	routes.UserRoutes(DB, r)
 	r.Run(":8080")
 }
