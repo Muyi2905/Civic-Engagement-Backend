@@ -10,10 +10,10 @@ import (
 func UserRoutes(db *gorm.DB, r *gin.Engine) {
 	r.Group("api/users")
 	{
-		r.POST("/", controllers.Signup)
-		r.POST("/", controllers.Login)
+		r.POST("/", func(c *gin.Context) { controllers.Signup(db, c) })
+		r.POST("/", func(c *gin.Context) { controllers.Login(db, c) })
 		r.GET("/", func(c *gin.Context) { controllers.GetUsers(db, c) })
 		r.GET("/", func(c *gin.Context) { controllers.GetUserById(db, c) })
-		r.PUT("/", func(c *gin.Context) { controllers.UpdateUserById(db, c) })
+		r.PUT("/", func(c *gin.Context) { controllers.UpdateUser(db, c) })
 	}
 }

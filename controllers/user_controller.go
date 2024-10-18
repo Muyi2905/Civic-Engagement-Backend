@@ -16,45 +16,65 @@ import (
 )
 
 var validate = validator.New()
-var jwtSecret = os.Getenv("JWT-SECRET")
+var jwtSecret = []byte(os.Getenv("JWT-SECRET"))
 
 type Claims struct {
 	UserId uint `json:"user_id"`
 	jwt.StandardClaims
 }
 
-func Signup(db *gorm.DB, c *gin.Context) {
 
+func Signup(db *gorm.DB, c *gin.Context) {
+	
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return 
 	}
+
 
 	if err := validate.Struct(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"err": err.Error()})
-	}
-
-	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error hashing password"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	user.Password = string(hashedpassword)
 
+	
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "password hashing failed"})
+		return
+	}
+	user.Password = string(hashedPassword)
+
+	
+	if err := db.Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+		return
+	}
+
+	// Generate JWT token
 	claims := &Claims{
 		UserId: user.ID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
 		},
 	}
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(jwtSecret)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
+
 	c.JSON(http.StatusOK, gin.H{"token": tokenString})
+}
+
+
+func Login(db *gorm.DB, c *gin.Context){
+	
+	var user models.User
+	if err:= db.First(&user).Find("id")
 }
 
 func GetUsers(db *gorm.DB, c *gin.Context) {
@@ -77,5 +97,8 @@ func GetUserById(db *gorm.DB, c *gin.Context) {
 		}
 
 	}
-
 }
+
+
+
+
