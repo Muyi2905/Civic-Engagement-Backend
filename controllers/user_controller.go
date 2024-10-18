@@ -23,22 +23,19 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-
 func Signup(db *gorm.DB, c *gin.Context) {
-	
+
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return 
+		return
 	}
-
 
 	if err := validate.Struct(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "password hashing failed"})
@@ -46,7 +43,6 @@ func Signup(db *gorm.DB, c *gin.Context) {
 	}
 	user.Password = string(hashedPassword)
 
-	
 	if err := db.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
 		return
@@ -66,15 +62,45 @@ func Signup(db *gorm.DB, c *gin.Context) {
 		return
 	}
 
-
 	c.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
+func Login(db *gorm.DB, c *gin.Context) {
 
-func Login(db *gorm.DB, c *gin.Context){
-	
+	var loginData struct {
+		Email    string `json:"email" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&loginData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var user models.User
-	if err:= db.First(&user).Find("id")
+	if err := db.Where("email = ?", loginData.Email).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
+		return
+	}
+
+	claims := &Claims{
+		UserId: user.ID,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
 func GetUsers(db *gorm.DB, c *gin.Context) {
@@ -98,7 +124,3 @@ func GetUserById(db *gorm.DB, c *gin.Context) {
 
 	}
 }
-
-
-
-
