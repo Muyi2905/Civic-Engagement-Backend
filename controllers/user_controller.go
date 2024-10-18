@@ -3,15 +3,25 @@ package controllers
 import (
 	"muyi2905/civic/backend/models"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 
+	"time"
+
+	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 var validate = validator.New()
+var jwtSecret = os.Getenv("JWT-SECRET")
+
+type Claims struct {
+	UserId uint `json:"user_id"`
+	jwt.StandardClaims
+}
 
 func Signup(db *gorm.DB, c *gin.Context) {
 
@@ -30,6 +40,21 @@ func Signup(db *gorm.DB, c *gin.Context) {
 		return
 	}
 	user.Password = string(hashedpassword)
+
+	claims := &Claims{
+		UserId: user.ID,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
 func GetUsers(db *gorm.DB, c *gin.Context) {
