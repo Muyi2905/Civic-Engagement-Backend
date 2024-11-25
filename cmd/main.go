@@ -19,8 +19,11 @@ func InitDb() {
 
 	if err := godotenv.Load(); err != nil {
 		log.Printf("error loading environment variable : %v", err)
+	} else {
+		log.Println("Environment variables loaded successfully")
 	}
 	dsn := os.Getenv("DSN")
+	log.Printf("DSN: %s", dsn)
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
