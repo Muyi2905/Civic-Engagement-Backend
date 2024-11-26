@@ -54,8 +54,8 @@ func main() {
 	r := gin.Default()
 
 	// Set up the routes
-	routes.UserRoutes(DB, r)     // User routes (you might already have these)
-	routes.(DB, r) // Elected Official routes
+	routes.UserRoutes(DB, r) // User routes (you might already have these)
+	routes.OfficialRoutes(DB, r)         // Elected Official routes
 
 	// Start the server on port 8080
 	if err := r.Run(":8080"); err != nil {

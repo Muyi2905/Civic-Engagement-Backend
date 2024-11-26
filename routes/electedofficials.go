@@ -7,7 +7,7 @@ import (
 )
 
 // officialRoutes sets up the routes for ElectedOfficial CRUD operations
-func officialRoutes(db *gorm.DB, r *gin.Engine) {
+func OfficialRoutes(db *gorm.DB, r *gin.Engine) {
 	r.POST("/officials", func(c *gin.Context) {
 		controllers.CreateOfficial(db, c)
 	})

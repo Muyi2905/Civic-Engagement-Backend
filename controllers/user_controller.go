@@ -69,9 +69,7 @@ func Signup(db *gorm.DB, c *gin.Context) {
 	}
 
 	// Log the error if it's not nil (this is for additional debugging)
-	if err != nil {
-		fmt.Println("Error during user query:", err)
-	}
+	fmt.Println("Error during user query:", err)
 
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
