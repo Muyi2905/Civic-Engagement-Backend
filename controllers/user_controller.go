@@ -1,12 +1,12 @@
 package controllers
 
 import (
+	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"muyi2905/civic/backend/models"
 	"net/http"
 	"os"
-
-	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 
 	"time"
 
@@ -43,34 +43,58 @@ func generateJWT(userId uint) (string, error) {
 }
 func Signup(db *gorm.DB, c *gin.Context) {
 	var user models.User
+	// Bind the incoming JSON to the user struct
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Validate the user input using the validator
 	if err := validate.Struct(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Add manual log here to ensure the code reaches this point
+	fmt.Println("About to query the database to check if user exists")
+
+	// Check if the user already exists (email or username)
+	var existingUser models.User
+
+	// Debug the SQL query to see what GORM is generating
+	err := db.Debug().Where("(email = ? OR username = ?) AND deleted_at IS NULL", user.Email, user.Username).First(&existingUser).Error
+	if err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "User with this email or username already exists"})
+		return
+	}
+
+	// Log the error if it's not nil (this is for additional debugging)
+	if err != nil {
+		fmt.Println("Error during user query:", err)
+	}
+
+	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "password hashing failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Password hashing failed"})
 		return
 	}
 	user.Password = string(hashedPassword)
 
+	// Create the user
 	if err := db.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
+	// Generate a JWT token for the new user
 	tokenString, err := generateJWT(user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
+	// Return the response
 	c.JSON(http.StatusOK, gin.H{
 		"token": tokenString,
 		"user": gin.H{
@@ -140,11 +164,12 @@ func GetProfile(db *gorm.DB, c *gin.Context) {
 }
 
 func GetUsers(db *gorm.DB, c *gin.Context) {
-	var user models.User
-	if err := db.Find(&user).Error; err != nil {
+	var users []models.User
+	if err := db.Find(&users).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "failed to get users"})
 	}
-	c.JSON(http.StatusOK, gin.H{"users": user})
+	c.JSON(http.StatusOK, gin.H{"users": users})
+
 }
 
 func GetUserById(db *gorm.DB, c *gin.Context) {
@@ -157,16 +182,18 @@ func GetUserById(db *gorm.DB, c *gin.Context) {
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		}
-
+		return
 	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
 func UpdateUser(db *gorm.DB, c *gin.Context) {
 	id := c.Param("id")
 
 	var updateUser struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
+		Username string `json:"username" binding:"required"`
+		Email    string `json:"email" binding:"required,email"`
 	}
 
 	var user models.User
