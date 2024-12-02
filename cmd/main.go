@@ -42,22 +42,21 @@ func InitDb() {
 }
 
 func main() {
-	// Initialize the database connection
+
 	InitDb()
 
-	// Migrate the database schema for the ElectedOfficial model
-	if err := DB.AutoMigrate(&models.ElectedOfficial{}); err != nil {
+	if err := DB.AutoMigrate(
+		&models.ElectedOfficial{},
+		&models.User{},
+	); err != nil {
 		log.Fatalf("Failed to auto-migrate database: %v", err)
 	}
 
-	// Set up the Gin router
 	r := gin.Default()
 
-	// Set up the routes
-	routes.UserRoutes(DB, r) // User routes (you might already have these)
-	routes.OfficialRoutes(DB, r)         // Elected Official routes
+	routes.UserRoutes(DB, r)
+	routes.OfficialRoutes(DB, r)
 
-	// Start the server on port 8080
 	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
