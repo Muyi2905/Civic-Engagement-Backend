@@ -49,26 +49,21 @@ func Signup(db *gorm.DB, c *gin.Context) {
 		return
 	}
 
-	// Validate the user input using the validator
 	if err := validate.Struct(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Add manual log here to ensure the code reaches this point
 	fmt.Println("About to query the database to check if user exists")
 
-	// Check if the user already exists (email or username)
 	var existingUser models.User
 
-	// Debug the SQL query to see what GORM is generating
 	err := db.Debug().Where("(email = ? OR username = ?) AND deleted_at IS NULL", user.Email, user.Username).First(&existingUser).Error
 	if err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "User with this email or username already exists"})
 		return
 	}
 
-	// Log the error if it's not nil (this is for additional debugging)
 	fmt.Println("Error during user query:", err)
 
 	// Hash the password
@@ -79,13 +74,11 @@ func Signup(db *gorm.DB, c *gin.Context) {
 	}
 	user.Password = string(hashedPassword)
 
-	// Create the user
 	if err := db.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
-	// Generate a JWT token for the new user
 	tokenString, err := generateJWT(user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
